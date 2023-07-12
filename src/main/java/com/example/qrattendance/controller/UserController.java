@@ -19,9 +19,9 @@ import com.example.qrattendance.service.UserService;
 @RequestMapping("/users")
 public class UserController {
 
+    public static final String TOKEN_ID_FIELD = "token-id";
     @Autowired
     private UserService userService;
-    
 
     @PostMapping("/login")
     public ResponseEntity<String> login(HttpSession session, @RequestBody LoginRequest loginRequest) {
@@ -31,7 +31,7 @@ public class UserController {
 
         if (sessionToken != null) {
             HttpHeaders responseHeaders = new HttpHeaders();
-            responseHeaders.set("token-id", sessionToken);
+            responseHeaders.set(TOKEN_ID_FIELD, sessionToken);
             return ResponseEntity.ok()
                     .headers(responseHeaders)
                     .build();
