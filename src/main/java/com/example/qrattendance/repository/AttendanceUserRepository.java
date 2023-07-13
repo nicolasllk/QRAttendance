@@ -6,7 +6,9 @@ import org.springframework.stereotype.Repository;
 import com.example.qrattendance.model.AttendanceUser;
 
 @Repository
-public interface UserRepository extends JpaRepository<AttendanceUser, Long> {
+public interface AttendanceUserRepository extends JpaRepository<AttendanceUser, Long> {
     
     Optional<AttendanceUser> findByUsername(String username);
+    
+    Optional<AttendanceUser> findByCurrentTokenSession(String currentTokenSession);
 }
