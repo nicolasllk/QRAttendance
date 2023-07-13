@@ -67,7 +67,7 @@ public class AttendanceService {
     public boolean isValidQrCode(final String decryptedQrCode) {
         return Optional.ofNullable(decryptedQrCode)
                 .map(qrCode -> attendanceClassRepository.findByQrCode(decryptedQrCode))
-                .map(optionalAttendanceClass -> optionalAttendanceClass.filter(this::isAttendanceClassActive))
+                .map(optionalAttendanceClass -> optionalAttendanceClass.filter(this::isAttendanceClassEnrollActive))
                 .isPresent();
     }
 
@@ -145,12 +145,18 @@ public class AttendanceService {
     }
 
     private boolean isAttendanceClassFinished(final AttendanceClass attendanceClass) {
-        return LocalDateTime.now().isBefore(attendanceClass.getEnd());
+        return LocalDateTime.now().isAfter(attendanceClass.getEnd());
     }
 
-    private boolean isAttendanceClassActive(final AttendanceClass attendanceClass) {
+    /**
+     * can the user enroll in the specified attendance class. The user cannot enroll in a class that has been active 
+     * for more than TOLERANCE_TIME minutes.
+     * @param attendanceClass
+     * @return
+     */
+    private boolean isAttendanceClassEnrollActive(final AttendanceClass attendanceClass) {
         final LocalDateTime now = LocalDateTime.now();
-        return now.isAfter(attendanceClass.getStart().plusMinutes(TOLERANCE_TIME)) 
-                && now.isBefore(attendanceClass.getEnd());
+        return now.isAfter(attendanceClass.getStart()) &&
+                now.isBefore(attendanceClass.getStart().plusMinutes(TOLERANCE_TIME));
     }
 }
