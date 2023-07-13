@@ -23,7 +23,6 @@ public class UserService {
             throw new IllegalArgumentException("Username already taken");
         }
 
-        // This is WRONG, BAD and LAME! dont!
         attendanceUser.setPassword(attendanceUser.getPassword());
         
         return attendanceUserRepository.saveAndFlush(attendanceUser);
