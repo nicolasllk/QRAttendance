@@ -30,7 +30,7 @@ public class AttendanceController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); 
         }
         
-        if (attendanceService.checkin(classId, token)) {
+        if (attendanceService.checkIn(classId, token)) {
             return ResponseEntity.ok("signed in!");
         }
        
