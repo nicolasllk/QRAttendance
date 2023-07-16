@@ -62,7 +62,7 @@ public class AttendanceServiceTest {
         when(attendanceClassRepository.findByQrCode(any())).thenReturn(optionalAttendanceClass);
         when(attendanceUserRepository.findByCurrentTokenSession(any())).thenReturn(optionalAttendanceUser);
         
-        Assert.assertTrue("should be true",attendanceService.checkin("classQrCode", "token"));
+        Assert.assertTrue("should be true",attendanceService.checkIn("classQrCode", "token"));
     }
     @Test
     public void testIsValidToken() {
