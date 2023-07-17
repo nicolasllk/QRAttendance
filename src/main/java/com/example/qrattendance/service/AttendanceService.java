@@ -6,8 +6,10 @@ import java.util.Optional;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.DatatypeConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.example.qrattendance.commons.CommonConstants;
 import com.example.qrattendance.dto.ActivityDetailsDTO;
 import com.example.qrattendance.model.ActivityReservation;
 import com.example.qrattendance.model.AttendanceClass;
@@ -19,13 +21,10 @@ import com.example.qrattendance.repository.AttendanceUserRepository;
 
 @Service
 public class AttendanceService {
-
     private static final String IV_PARAM_SPEC = "random1234567890";
-    private static final String SECRET_KEY_SPEC = "secretKey1234567";
+    private static final String SECRET_KEY_SPEC = "DkXbR21lnI0ChDsC4tnwRKNQSZ0lEhO8";
     private static final int TOLERANCE_TIME = 15;
-    private static final String TRANSFORMATION = "AES/CBC/PKCS5Padding";
-    private static final String AES = "AES";
-
+    
     private final AttendanceUserRepository attendanceUserRepository;
     private final AttendanceClassRepository attendanceClassRepository;
     private final ActivityReservationRepository activityReservationRepository;
@@ -39,10 +38,6 @@ public class AttendanceService {
         this.activityReservationRepository = activityReservationRepository;
     }
 
-    public boolean isValidToken(final String token) {
-        return attendanceUserRepository.findByCurrentTokenSession(token).isPresent();
-    }
-
     public boolean checkIn(final String classQrCode, final String token) {
         if (canCheckIn(classQrCode, token)) {
             return doCheckIn(classQrCode, token);
@@ -50,28 +45,18 @@ public class AttendanceService {
         return false;
     }
 
+    /**
+     * Does the qrCode belongs to an actual classroom activity
+     * @param decryptedQrCode classroom uniquely assigned qrcode
+     * @return true if  valid false otherwise
+     */
     public boolean isValidQrCode(final String decryptedQrCode) {
         return Optional.ofNullable(decryptedQrCode)
-                .flatMap(qrCode -> attendanceClassRepository.findByQrCode(qrCode))
-                .filter(this::isAttendanceClassEnrollActive)
+                .flatMap(attendanceClassRepository::findByQrCode)
+                .filter(this::isAttendanceClassEnrollPeriodActive)
                 .isPresent();
     }
-
-    public String decryptCode(final String qrCode) {
-        try {
-            final Cipher qrCipher = Cipher.getInstance(TRANSFORMATION);
-            final IvParameterSpec ivParameterSpec = new IvParameterSpec(IV_PARAM_SPEC.getBytes());
-            final SecretKeySpec secretKeySpec = new SecretKeySpec(SECRET_KEY_SPEC.getBytes(), AES);
-            qrCipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec);
-
-            byte[] decryptedBytes = qrCipher.doFinal(Base64.getDecoder().decode(qrCode));
-            return new String(decryptedBytes);
-        } catch (Exception e) {
-            // Log the error
-            return null;
-        }
-    }
-
+    
     public ActivityDetailsDTO getActivity(final String decryptedQrCode) {
         return Optional.ofNullable(decryptedQrCode)
                 .flatMap(attendanceClassRepository::findByQrCode)
@@ -80,6 +65,22 @@ public class AttendanceService {
                 .orElse(null);
     }
 
+    public String decryptQrToken(final String token) {
+        try {
+            final Cipher qrCipher = Cipher.getInstance(CommonConstants.TRANSFORMATION);
+            final IvParameterSpec ivParameterSpec = new IvParameterSpec(IV_PARAM_SPEC.getBytes());
+            final SecretKeySpec secretKeySpec = new SecretKeySpec(SECRET_KEY_SPEC.getBytes(),
+                    CommonConstants.AES);
+            qrCipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec);
+            
+            byte[] decryptedBytes = qrCipher.doFinal(Base64.getDecoder().decode(token));
+            return new String(decryptedBytes);
+        } catch (Exception e) {
+            // Log the error
+            return null;
+        }
+    }
+    
     private boolean doCheckIn(final String classQrCode, final String token) {
         final Optional<AttendanceUser> optionalAttendanceUser = attendanceUserRepository.findByCurrentTokenSession(token);
 
@@ -102,9 +103,16 @@ public class AttendanceService {
     private boolean canCheckIn(final String classId, final String token) {
         // Check if user is not already enrolled
         final Optional<ActivityReservation> reservation = activityReservationRepository.findByAttendanceUser_CurrentTokenSession(token);
-        return reservation.map(activityReservation ->
-                        isOngoingActivity(activityReservation.getQrCode()) && isValidQrCode(classId))
-                .orElseGet(() -> isValidQrCode(classId));
+        if (reservation.isPresent()) {
+            //token already registered in classroom
+            return false;
+        }
+        
+        return isValidQrCode(classId) && isOngoingActivity(classId);
+        
+//        return reservation.map(activityReservation ->
+//                        isOngoingActivity(activityReservation.getQrCode()) && isValidQrCode(classId))
+//                .orElseGet(() -> isValidQrCode(classId));
     }
 
     private boolean isOngoingActivity(final String qrCode) {
@@ -118,7 +126,7 @@ public class AttendanceService {
         return LocalDateTime.now().isAfter(attendanceClass.getEnd());
     }
 
-    private boolean isAttendanceClassEnrollActive(final AttendanceClass attendanceClass) {
+    private boolean isAttendanceClassEnrollPeriodActive(final AttendanceClass attendanceClass) {
         final LocalDateTime now = LocalDateTime.now();
         return now.isAfter(attendanceClass.getStart()) &&
                 now.isBefore(attendanceClass.getStart().plusMinutes(TOLERANCE_TIME));
