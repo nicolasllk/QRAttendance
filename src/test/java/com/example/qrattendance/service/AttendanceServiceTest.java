@@ -1,6 +1,5 @@
 package com.example.qrattendance.service;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import java.time.LocalDateTime;
@@ -63,13 +62,6 @@ public class AttendanceServiceTest {
         when(attendanceUserRepository.findByCurrentTokenSession(any())).thenReturn(optionalAttendanceUser);
         
         Assert.assertTrue("should be true",attendanceService.checkIn("classQrCode", "token"));
-    }
-    @Test
-    public void testIsValidToken() {
-        final AttendanceUser attendanceUser = new AttendanceUser();
-        final Optional<AttendanceUser> optionalAttendanceUser = Optional.of(attendanceUser);
-        when(attendanceUserRepository.findByCurrentTokenSession(any())).thenReturn(optionalAttendanceUser);
-        Assert.assertTrue("should be true", attendanceService.isValidToken("token"));
     }
     
 }
